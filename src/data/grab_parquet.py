@@ -1,15 +1,16 @@
 import sys
 from datetime import datetime, timedelta
 
-from minio import Minio, S3Error
+from minio import Minio
 import requests
 import pandas as pd
 import os
-from io import StringIO  # Import StringIO from io
+from io import StringIO
 
 
 def main():
     grab_data()
+    write_data_minio()
 
 
 def grab_data() -> None:
@@ -62,7 +63,7 @@ def write_data_minio():
         access_key="minio",
         secret_key="minio123"
     )
-    bucket: str = "NOM_DU_BUCKET_ICI"
+    bucket: str = "taxi"
     found = client.bucket_exists(bucket)
     if not found:
         client.make_bucket(bucket)
