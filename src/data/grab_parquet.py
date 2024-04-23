@@ -21,7 +21,7 @@ def grab_data() -> None:
     Files are saved into "../../data/raw" folder
     This methods takes no arguments and returns nothing.
     """
-    base_url = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_"
+    base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-{month}.parquet"
     for month in range(1, 9):  # Months from January (1) to August (8)
         year_month = f"2023-{month:02d}"
         url = f"{base_url}{year_month}.csv"
@@ -40,7 +40,7 @@ def grab_last_month_data() -> None:
     File is saved into "../../data/raw" folder
     This methods takes no arguments and returns nothing.
     """
-    base_url = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_"
+    base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-{month}.parquet"
     today = datetime.today()
     last_month = today.replace(day=1) - timedelta(days=1)
     year_month = last_month.strftime("%Y-%m")
