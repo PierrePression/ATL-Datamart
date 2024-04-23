@@ -1,8 +1,9 @@
 import gc
-import os
 import sys
-
+from xmlrpc.client import ResponseError
+import io
 import pandas as pd
+from minio import Minio
 from sqlalchemy import create_engine
 
 
@@ -60,25 +61,37 @@ def clean_column_name(dataframe: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
-    # folder_path: str = r'..\..\data\raw'
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    # Construct the relative path to the folder
-    folder_path = os.path.join(script_dir, '..', '..', 'data', 'raw')
+    client = Minio(
+        "localhost:9000",
+        secure=False,
+        access_key="minio",
+        secret_key="minio123"
+    )
+    bucket: str = "taxi"
+    found = client.bucket_exists(bucket)
+    if not found:
+        print(f"Bucket {bucket} does not exist")
+        return
 
-    parquet_files = [f for f in os.listdir(folder_path) if
-                     f.lower().endswith('.parquet') and os.path.isfile(os.path.join(folder_path, f))]
+    print(f"Bucket {bucket} already exists")
+
+    # Loop through the parquet files and write them to the database
+    parquet_files = client.list_objects(bucket, recursive=True)
 
     for parquet_file in parquet_files:
-        parquet_df: pd.DataFrame = pd.read_parquet(os.path.join(folder_path, parquet_file), engine='pyarrow')
+        try:
+            data = client.get_object(bucket, parquet_file.object_name)
+            data_bytes = io.BytesIO(data.read())
+            parquet_df: pd.DataFrame = pd.read_parquet(data_bytes, engine='pyarrow')
 
-        clean_column_name(parquet_df)
-        if not write_data_postgres(parquet_df):
-            del parquet_df
-            gc.collect()
-            return
-
-        del parquet_df
-        gc.collect()
+            clean_column_name(parquet_df)
+            if not write_data_postgres(parquet_df):
+                del parquet_df
+                gc.collect()
+            else:
+                return
+        except ResponseError as err:
+            print(err)
 
 
 if __name__ == '__main__':
