@@ -4,8 +4,9 @@ from datetime import datetime, timedelta
 from minio import Minio
 import requests
 import pandas as pd
-import os
 from io import StringIO
+import os
+import stat
 
 
 def main():
@@ -13,34 +14,39 @@ def main():
     write_data_minio()
 
 
+CHUNK_SIZE = 1024
+BASE_URL = "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-{month}.parquet"
+TARGET_DIR = "../../data/raw"
+
+def download_file(url: str, destination_path: str) -> None:
+    try:
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+
+        with open(destination_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+                f.write(chunk)
+        print(f"Saved to {destination_path}")
+    except requests.HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+    except Exception as err:
+        print(f"An error occurred: {err}")
+
 def grab_data() -> None:
-    """Grab the data from New York Yellow Taxi
+    os.makedirs(TARGET_DIR, exist_ok=True)
+    months = ['01', '02', '03', '04', '05', '06', '07', '08']
 
-    This method download files of the New York Yellow Taxi from January 2023 to August 2023.
+    for month in months:
+        file_name = f"yellow_tripdata_2023-{month}.parquet"
+        url = BASE_URL.format(month=month)
+        destination_path = os.path.join(TARGET_DIR, file_name)
 
-    Files are saved into "../../data/raw" folder
-    This methods takes no arguments and returns nothing.
-    """
-    base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-{month}.parquet"
-    for month in range(1, 9):  # Months from January (1) to August (8)
-        year_month = f"2023-{month:02d}"
-        url = f"{base_url}{year_month}.csv"
-        response = requests.get(url)
-        file_content = response.content.decode('utf-8')
-        data_frame = pd.read_csv(StringIO(file_content))  # Use StringIO from io
-        destination = f"yellow_tripdata_{year_month}.parquet"
-        data_frame.to_parquet(os.path.join("../../data/raw", destination))
+        print(f"Downloading {file_name}...")
+        download_file(url, destination_path)
 
 
 def grab_last_month_data() -> None:
-    """Grab the data from New York Yellow Taxi for the last month
-
-    This method download the file of the New York Yellow Taxi for the last month.
-
-    File is saved into "../../data/raw" folder
-    This methods takes no arguments and returns nothing.
-    """
-    base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-{month}.parquet"
+    base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_"
     today = datetime.today()
     last_month = today.replace(day=1) - timedelta(days=1)
     year_month = last_month.strftime("%Y-%m")
@@ -49,8 +55,9 @@ def grab_last_month_data() -> None:
     file_content = response.content.decode('utf-8')
     data_frame = pd.read_csv(StringIO(file_content))
     destination = f"yellow_tripdata_{year_month}.parquet"
-    data_frame.to_parquet(os.path.join("../../data/raw", destination))
-
+    file_path = os.path.join("../../data/raw", destination)
+    data_frame.to_parquet(file_path)
+    os.chmod(file_path, stat.S_IRUSR | stat.S_IWUSR)
 
 def write_data_minio():
     """

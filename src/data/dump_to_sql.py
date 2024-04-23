@@ -1,23 +1,15 @@
 import gc
+import http
+import os
 import sys
-from xmlrpc.client import ResponseError
-import io
+
 import pandas as pd
 from minio import Minio
 from sqlalchemy import create_engine
+from io import BytesIO
 
 
-def write_data_postgres(dataframe: pd.DataFrame) -> bool:
-    """
-    Dumps a Dataframe to the DBMS engine
-
-    Parameters:
-        - dataframe (pd.Dataframe) : The dataframe to dump into the DBMS engine
-
-    Returns:
-        - bool : True if the connection to the DBMS and the dump to the DBMS is successful, False if either
-        execution is failed
-    """
+def get_db_config():
     db_config = {
         "dbms_engine": "postgresql",
         "dbms_username": "postgres",
@@ -32,12 +24,23 @@ def write_data_postgres(dataframe: pd.DataFrame) -> bool:
         f"{db_config['dbms_engine']}://{db_config['dbms_username']}:{db_config['dbms_password']}@"
         f"{db_config['dbms_ip']}:{db_config['dbms_port']}/{db_config['dbms_database']}"
     )
+    return db_config
+
+def get_minio_client():
+    return Minio(
+        "localhost:9000",
+        secure=False,
+        access_key="minio",
+        secret_key="minio123"
+    )
+
+def write_data_postgres(dataframe: pd.DataFrame, db_config) -> bool:
     try:
         engine = create_engine(db_config["database_url"])
         with engine.connect():
             success: bool = True
             print("Connection successful! Processing parquet file")
-            dataframe.to_sql(db_config["dbms_table"], engine, index=False, if_exists='append')
+            dataframe.to_sql(db_config["dbms_table"], engine, index=False, if_exists='append', chunksize=500)
 
     except Exception as e:
         success: bool = False
@@ -46,52 +49,66 @@ def write_data_postgres(dataframe: pd.DataFrame) -> bool:
 
     return success
 
-
 def clean_column_name(dataframe: pd.DataFrame) -> pd.DataFrame:
-    """
-    Take a Dataframe and rewrite it columns into a lowercase format.
-    Parameters:
-        - dataframe (pd.DataFrame) : The dataframe columns to change
-
-    Returns:
-        - pd.Dataframe : The changed Dataframe into lowercase format
-    """
     dataframe.columns = map(str.lower, dataframe.columns)
     return dataframe
 
+def process_parquet_file(client, bucket, parquet_file, db_config):
+    try:
+        response = client.get_object(bucket, parquet_file.object_name)
+        parquet_df = pd.read_parquet(BytesIO(response.data), engine='pyarrow')
+        clean_column_name(parquet_df)
+        if not write_data_postgres(parquet_df, db_config):
+            del parquet_df
+            gc.collect()
+            return False
+        del parquet_df
+        gc.collect()
+        return True
+    except Exception as e:
+        print(f"Error processing parquet file: {e}")
+        return False
 
 def main() -> None:
-    client = Minio(
-        "localhost:9000",
-        secure=False,
-        access_key="minio",
-        secret_key="minio123"
-    )
+    client = get_minio_client()
     bucket: str = "taxi"
     found = client.bucket_exists(bucket)
     if not found:
-        print(f"Bucket {bucket} does not exist")
-        return
+        client.make_bucket(bucket)
+    else:
+        print(f"Bucket {bucket} already exists")
 
-    print(f"Bucket {bucket} already exists")
+    db_config = get_db_config()
 
-    # Loop through the parquet files and write them to the database
     parquet_files = client.list_objects(bucket, recursive=True)
-
     for parquet_file in parquet_files:
-        try:
-            data = client.get_object(bucket, parquet_file.object_name)
-            data_bytes = io.BytesIO(data.read())
-            parquet_df: pd.DataFrame = pd.read_parquet(data_bytes, engine='pyarrow')
+        if parquet_file.object_name == "yellow_tripdata_2023-01.parquet":
+            try:
+                if not client.stat_object(bucket, parquet_file.object_name):
+                    print(f"Object {parquet_file.object_name} does not exist in bucket {bucket}")
+                    continue
 
-            clean_column_name(parquet_df)
-            if not write_data_postgres(parquet_df):
+                response = client.get_object(bucket, parquet_file.object_name)
+                for _ in range(3):  # Retry up to 3 times
+                    try:
+                        parquet_df = pd.read_parquet(BytesIO(response.data), engine='pyarrow')
+                        break
+                    except http.client.IncompleteRead:
+                        print("Incomplete read, retrying...")
+                else:  # No break, raise an error
+                    raise RuntimeError("Failed to read data after 3 attempts")
+
+                clean_column_name(parquet_df)
+                if not write_data_postgres(parquet_df, db_config):
+                    del parquet_df
+                    gc.collect()
+                    return
+
                 del parquet_df
                 gc.collect()
-            else:
+            except Exception as e:
+                print(f"Error processing parquet file: {e}")
                 return
-        except ResponseError as err:
-            print(err)
 
 
 if __name__ == '__main__':
