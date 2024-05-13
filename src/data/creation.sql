@@ -1,7 +1,9 @@
 -- Création des tables de dimension
 CREATE TABLE ville (
     index INT PRIMARY KEY,
-    nomVille VARCHAR(255) NOT NULL
+    nomVille VARCHAR(255) NOT NULL,
+    codePostal INT NOT NULL,
+    pays VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE mode_paiement (
@@ -15,6 +17,7 @@ CREATE TABLE mode_paiement (
 CREATE TABLE destinations (
     IDdestination INT PRIMARY KEY,
     IDVille INT NOT NULL,
+    IntituleAdresse VARCHAR(255) NOT NULL,
     FOREIGN KEY (IDVille) REFERENCES ville(index)
 );
 
