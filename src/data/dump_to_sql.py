@@ -40,7 +40,7 @@ def write_data_postgres(dataframe: pd.DataFrame, db_config) -> bool:
         with engine.connect():
             success: bool = True
             print("Connection successful! Processing parquet file")
-            dataframe.to_sql(db_config["dbms_table"], engine, index=False, if_exists='append', chunksize=500)
+            dataframe.to_sql(db_config["dbms_table"], engine, index=True, if_exists='append', chunksize=500)
 
     except Exception as e:
         success: bool = False
