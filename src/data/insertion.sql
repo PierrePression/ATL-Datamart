@@ -66,10 +66,10 @@ ALTER TABLE frais_Trajets
 ALTER COLUMN IDFraisTrajets SET DEFAULT nextval('frais_trajets_id_seq');
 
 INSERT INTO frais_trajets(
-        IDModeDePaiement, IDdestinationDépart, IDdestinationArrivée, montant_tarif, extra, taxe_MTA, montant_peage, supplement_contribution, frais_embouteillage, frais_aeroport, montant_pourboire, total_prix
+        IDModeDePaiement,  montant_tarif, extra, taxe_MTA, montant_peage, supplement_contribution, frais_embouteillage, frais_aeroport, montant_pourboire, total_prix
     )
     SELECT
-        nr.payment_type, nr.pulocationid, nr.dolocationid, nr.fare_amount, nr.extra, nr.mta_tax, nr.tolls_amount, nr.improvement_surcharge, nr.congestion_surcharge, nr.airport_fee, nr.tip_amount, nr.total_amount
+        nr.payment_type, nr.fare_amount, nr.extra, nr.mta_tax, nr.tolls_amount, nr.improvement_surcharge, nr.congestion_surcharge, nr.airport_fee, nr.tip_amount, nr.total_amount
     FROM
         nyc_raw nr
     JOIN
@@ -88,24 +88,28 @@ INSERT INTO frais_trajets(
 
 
 
---Script SQL remplissant la table "Trajet"
+ --Script SQL remplissant la table "Trajet"
 CREATE SEQUENCE trajets_id_seq;
 
 ALTER TABLE trajet
 ALTER COLUMN IDTrajet SET DEFAULT nextval('trajets_id_seq');
 
   INSERT INTO trajet(
-        nombre_passagers, distance, heure_recup, heure_depot, idFrais_Trajets
+        nombre_passagers, IDdestinationDépart, IDdestinationArrivée, distance, heure_recup, heure_depot, idFrais_Trajets
     )
     SELECT
-        nr.passenger_count, nr.trip_distance, nr.tpep_pickup_datetime, nr.tpep_dropoff_datetime, ft.idfraistrajets
+        nr.passenger_count, nr.pulocationid, nr.dolocationid, nr.trip_distance, nr.tpep_pickup_datetime, nr.tpep_dropoff_datetime, ft.idfraistrajets
     FROM nyc_raw nr
     JOIN frais_trajets ft
-    on ft.iddestinationarrivée  = nr.dolocationid and ft.iddestinationdépart = nr.pulocationid  and ft.idmodedepaiement = nr.payment_type and ft.frais_embouteillage = nr.congestion_surcharge
+    on ft.idmodedepaiement = nr.payment_type and ft.frais_embouteillage = nr.congestion_surcharge
     and ft.montant_tarif = nr.fare_amount and ft.extra = nr.extra and ft.taxe_mta = nr.mta_tax and ft.supplement_contribution = nr.improvement_surcharge and ft.montant_pourboire = nr.tip_amount
     and ft.montant_peage = nr.tolls_amount and ft.frais_aeroport = nr.airport_fee and ft.total_prix = nr.total_amount
+    join destinations d
+    on d.IDDestination = nr.dolocationid and d.IDDestination = nr.pulocationid
     where
     (payment_type IS NOT NULL)
     AND (pulocationid IS NOT NULL)
     AND (dolocationid IS NOT NULL)
     and (passenger_count is not NULL)
+
+

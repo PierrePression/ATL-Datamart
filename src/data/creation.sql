@@ -26,8 +26,6 @@ CREATE TABLE destinations (
 -- Création de la table des frais de trajet
 CREATE TABLE frais_Trajets (
     IDFraisTrajets INT PRIMARY KEY,
-    IDdestinationArrivée INT NOT NULL,
-    IDdestinationDépart INT NOT NULL,
     frais_embouteillage DECIMAL(10,2),
     montant_tarif DECIMAL(10,2),
     extra DECIMAL(10,2),
@@ -39,20 +37,22 @@ CREATE TABLE frais_Trajets (
     frais_aeroport DECIMAL(10,2),
     total_prix DECIMAL(10,2),
 
-    FOREIGN KEY (IDdestinationArrivée) REFERENCES destinations(IDdestination),
-    FOREIGN KEY (IDdestinationDépart) REFERENCES destinations(IDdestination),
     FOREIGN KEY (IDModeDePaiement) REFERENCES mode_paiement(IDMode_Paiement)
 );
 
 -- Création de la table des trajets
 CREATE TABLE trajet (
     IDTrajet INT PRIMARY KEY,
+    IDdestinationArrivée INT NOT NULL,
+    IDdestinationDépart INT NOT NULL,
     heure_recup DATE NOT NULL,
     heure_depot DATE NOT NULL,
     distance DECIMAL(10,2) NOT NULL,
     idFrais_Trajets INT NOT NULL,
     nombre_passagers INT NOT NULL,
-    FOREIGN KEY (idFrais_Trajets) REFERENCES frais_Trajets(IDFraisTrajets)
+    FOREIGN KEY (idFrais_Trajets) REFERENCES frais_Trajets(IDFraisTrajets),
+    FOREIGN KEY (IDdestinationArrivée) REFERENCES destinations(IDdestination),
+    FOREIGN KEY (IDdestinationDépart) REFERENCES destinations(IDdestination)
 );
 
 
