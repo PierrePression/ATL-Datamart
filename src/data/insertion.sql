@@ -1,71 +1,111 @@
---Insertion base trajet
-CREATE EXTENSION IF NOT EXISTS dblink;
+--Script SQL remplissant la table "Ville"
+CREATE SEQUENCE ville_id_seq;
 
-INSERT INTO trajet(
-    passenger_count, trip_distance, tpep_pickup_datetime, tpep_dropoff_datetime
-)
-SELECT
-    passenger_count, trip_distance, tpep_pickup_datetime, tpep_dropoff_datetime
-FROM
-    dblink(
-        'dbname=nyc_warehouse user=postgres password=admin',
-        'SELECT vendorid, ratecodeid, payment_type, pulocationid, dolocationid, passenger_count, trip_distance, store_and_fwd_flag, fare_amount, extra, mta_tax, tolls_amount, improvement_surcharge, congestion_surcharge, airport_fee, tpep_pickup_datetime, tpep_dropoff_datetime, tip_amount, total_amount
-        FROM nyc_raw
-        WHERE (vendorid = 1 OR vendorid = 2 AND vendorid IS NOT NULL)
-        AND (ratecodeid BETWEEN 1 AND 6 AND ratecodeid IS NOT NULL)
-        AND (payment_type BETWEEN 1 AND 6 AND payment_type IS NOT NULL)
-        AND ((pulocationid BETWEEN 1 AND 263 AND trip_distance BETWEEN 1 AND 100) OR (pulocationid = 265 AND trip_distance BETWEEN 1 AND 235) AND pulocationid IS NOT NULL)
-        AND ((dolocationid BETWEEN 1 AND 263 AND trip_distance BETWEEN 1 AND 100) OR (dolocationid = 265 AND trip_distance BETWEEN 1 AND 235) AND dolocationid IS NOT NULL)
-        AND (passenger_count BETWEEN 1 AND 4 AND passenger_count IS NOT NULL)
-        AND (trip_distance IS NOT NULL)
-        AND (store_and_fwd_flag IS NOT NULL)
-        AND (fare_amount IS NOT NULL)
-        AND (extra BETWEEN 0.5 AND 1 AND extra IS NOT NULL)
-        AND (mta_tax = 0.5)
-        AND (tolls_amount IS NOT NULL AND tolls_amount BETWEEN 0 AND 50)
-        AND (improvement_surcharge IS NOT NULL)
-        AND (congestion_surcharge BETWEEN 0 AND 2.5 AND congestion_surcharge IS NOT NULL)
-        AND (airport_fee = 1.25 AND (pulocationid = 138 OR pulocationid = 132) OR (airport_fee = 0 AND pulocationid != 138 AND pulocationid != 132) AND airport_fee IS NOT NULL)
-        AND (tpep_pickup_datetime BETWEEN ''2023-01-01 00:00:00'' AND ''2023-08-31 23:59:59'' AND tpep_pickup_datetime IS NOT NULL)
-        AND (tpep_dropoff_datetime BETWEEN ''2023-01-01 00:00:00'' AND ''2023-08-31 23:59:59'' AND tpep_dropoff_datetime IS NOT NULL)
-        AND (tip_amount IS NOT NULL)
-        AND (total_amount IS NOT NULL)'
-    ) AS t(
-        nombre_passagers INT, distance FLOAT, heure_recup TIMESTAMP, heure_depot TIMESTAMP
-    );
+ALTER TABLE ville
+ALTER COLUMN IDVille SET DEFAULT nextval('ville_id_seq');
 
---insertion base frais_trajets
-CREATE EXTENSION IF NOT EXISTS dblink;
+INSERT INTO ville (nomVille, codePostal, pays)
+values
+  ('Paris', 75000, 'France'),
+  ('Berlin', 10117, 'Germany'),
+  ('Rome', 00187, 'Italy'),
+  ('London', '1445184', 'United Kingdom'),
+  ('New York City', 10001, 'United States'),
+  ('Madrid', 28000, 'Spain'),
+  ('Barcelona', 08001, 'Spain'),
+  ('Lisbon', 1100001, 'Portugal'),
+  ('Amsterdam', 15248, 'Netherlands'),
+  ('Brussels', 1000, 'Belgium'),
+  ('Vienna', 1010, 'Austria'),
+  ('Prague', 11000, 'Czech Republic'),
+  ('Copenhagen', 1013, 'Denmark'),
+  ('Stockholm', 11152, 'Sweden'),
+  ('Helsinki', 00100, 'Finland'),
+  ('Warsaw', 00001, 'Poland'),
+  ('Budapest', 1013, 'Hungary'),
+  ('Bratislava', 81101, 'Slovakia'),
+  ('Ljubljana', 1000, 'Slovenia'),
+  ('Zagreb', 10000, 'Croatia');
 
-INSERT INTO trajet(
-    payment_type, pulocationid, dolocationid, fare_amount, extra, mta_tax, tolls_amount, improvement_surcharge, congestion_surcharge, airport_fee, tip_amount, total_amount
-)
-SELECT
-    payment_type, pulocationid, dolocationid, fare_amount, extra, mta_tax, tolls_amount, improvement_surcharge, congestion_surcharge, airport_fee, tip_amount, total_amount
-FROM
-    dblink(
-        'dbname=nyc_warehouse user=postgres password=admin',
-        'SELECT vendorid, ratecodeid, payment_type, pulocationid, dolocationid, passenger_count, trip_distance, store_and_fwd_flag, fare_amount, extra, mta_tax, tolls_amount, improvement_surcharge, congestion_surcharge, airport_fee, tpep_pickup_datetime, tpep_dropoff_datetime, tip_amount, total_amount
-        FROM nyc_raw
-        WHERE (vendorid = 1 OR vendorid = 2 AND vendorid IS NOT NULL)
-        AND (ratecodeid BETWEEN 1 AND 6 AND ratecodeid IS NOT NULL)
-        AND (payment_type BETWEEN 1 AND 6 AND payment_type IS NOT NULL)
-        AND ((pulocationid BETWEEN 1 AND 263 AND trip_distance BETWEEN 1 AND 100) OR (pulocationid = 265 AND trip_distance BETWEEN 1 AND 235) AND pulocationid IS NOT NULL)
-        AND ((dolocationid BETWEEN 1 AND 263 AND trip_distance BETWEEN 1 AND 100) OR (dolocationid = 265 AND trip_distance BETWEEN 1 AND 235) AND dolocationid IS NOT NULL)
-        AND (passenger_count BETWEEN 1 AND 4 AND passenger_count IS NOT NULL)
-        AND (trip_distance IS NOT NULL)
-        AND (store_and_fwd_flag IS NOT NULL)
-        AND (fare_amount IS NOT NULL)
-        AND (extra BETWEEN 0.5 AND 1 AND extra IS NOT NULL)
-        AND (mta_tax = 0.5)
-        AND (tolls_amount IS NOT NULL AND tolls_amount BETWEEN 0 AND 50)
-        AND (improvement_surcharge IS NOT NULL)
-        AND (congestion_surcharge BETWEEN 0 AND 2.5 AND congestion_surcharge IS NOT NULL)
-        AND (airport_fee = 1.25 AND (pulocationid = 138 OR pulocationid = 132) OR (airport_fee = 0 AND pulocationid != 138 AND pulocationid != 132) AND airport_fee IS NOT NULL)
-        AND (tpep_pickup_datetime BETWEEN ''2023-01-01 00:00:00'' AND ''2023-08-31 23:59:59'' AND tpep_pickup_datetime IS NOT NULL)
-        AND (tpep_dropoff_datetime BETWEEN ''2023-01-01 00:00:00'' AND ''2023-08-31 23:59:59'' AND tpep_dropoff_datetime IS NOT NULL)
-        AND (tip_amount IS NOT NULL)
-        AND (total_amount IS NOT NULL)'
-    ) AS t(
-        IDModeDePaiement INT, IDdestinationDépart INT, IDdestinationArrivée INT, montant_tarif FLOAT, extra FLOAT, taxe_MTA FLOAT, montant_peage FLOAT, supplement_contribution FLOAT, frais_embouteillage FLOAT, frais_aeroport FLOAT, montant_pourboire FLOAT, total_prix FLOAT
-    );
+
+--Script SQL remplissant la table "Mode_Paiement"
+CREATE SEQUENCE modePaiement_id_seq;
+
+ALTER TABLE mode_paiement
+ALTER COLUMN IDMode_Paiement SET DEFAULT nextval('modePaiement_id_seq');
+
+INSERT INTO mode_paiement (nomModeDePaiement, taxe_ModeDePaiement)
+VALUES
+  ('Espèces', 0.50),
+  ('Carte de crédit', 0.75),
+  ('Application de taxi', 1.00),
+  ('Bon de taxi', 1.25),
+  ('Pass taxi', 1.50);
+
+
+--Script SQL remplissant la table "Destination"
+CREATE SEQUENCE destinations_id_seq;
+
+ALTER TABLE destinations
+ALTER COLUMN IDDestination SET DEFAULT nextval('destinations_id_seq');
+
+INSERT INTO destinations (IDVille, IntituleAdresse)
+VALUES
+  (1, '1600 Pennsylvania Avenue NW, Washington D.C.'),
+  (2, 'Brandenburg Gate, Berlin, Germany'),
+  (3, 'Colosseum, Rome, Italy'),
+  (4, 'Buckingham Palace, London, United Kingdom'),
+  (5, 'Times Square, New York City, USA');
+
+
+
+--Script SQL remplissant la table "Frais_Trajets"
+CREATE SEQUENCE frais_trajets_id_seq;
+
+ALTER TABLE frais_Trajets
+ALTER COLUMN IDFraisTrajets SET DEFAULT nextval('frais_trajets_id_seq');
+
+INSERT INTO frais_trajets(
+        IDModeDePaiement, IDdestinationDépart, IDdestinationArrivée, montant_tarif, extra, taxe_MTA, montant_peage, supplement_contribution, frais_embouteillage, frais_aeroport, montant_pourboire, total_prix
+    )
+    SELECT
+        nr.payment_type, nr.pulocationid, nr.dolocationid, nr.fare_amount, nr.extra, nr.mta_tax, nr.tolls_amount, nr.improvement_surcharge, nr.congestion_surcharge, nr.airport_fee, nr.tip_amount, nr.total_amount
+    FROM
+        nyc_raw nr
+    JOIN
+    	mode_paiement mp
+    ON
+    	mp.IDMode_Paiement = nr.payment_type
+    JOIN
+    	destinations d
+    ON
+    	d.IDDestination = nr.pulocationid and d.IDDestination = nr.dolocationid
+    WHERE (vendorid IS NOT NULL)
+    AND (payment_type IS NOT NULL)
+    AND (pulocationid IS NOT NULL)
+    AND (dolocationid IS NOT NULL)
+    AND (passenger_count IS NOT NULL)
+
+
+
+--Script SQL remplissant la table "Trajet"
+CREATE SEQUENCE trajets_id_seq;
+
+ALTER TABLE trajet
+ALTER COLUMN IDTrajet SET DEFAULT nextval('trajets_id_seq');
+
+  INSERT INTO trajet(
+        nombre_passagers, distance, heure_recup, heure_depot, idFrais_Trajets
+    )
+    SELECT
+        nr.passenger_count, nr.trip_distance, nr.tpep_pickup_datetime, nr.tpep_dropoff_datetime, ft.idfraistrajets
+    FROM nyc_raw nr
+    JOIN frais_trajets ft
+    on ft.iddestinationarrivée  = nr.dolocationid and ft.iddestinationdépart = nr.pulocationid  and ft.idmodedepaiement = nr.payment_type and ft.frais_embouteillage = nr.congestion_surcharge
+    and ft.montant_tarif = nr.fare_amount and ft.extra = nr.extra and ft.taxe_mta = nr.mta_tax and ft.supplement_contribution = nr.improvement_surcharge and ft.montant_pourboire = nr.tip_amount
+    and ft.montant_peage = nr.tolls_amount and ft.frais_aeroport = nr.airport_fee and ft.total_prix = nr.total_amount
+    where
+    (payment_type IS NOT NULL)
+    AND (pulocationid IS NOT NULL)
+    AND (dolocationid IS NOT NULL)
+    and (passenger_count is not NULL)
